@@ -104,4 +104,14 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+
+  int traced_syscall;          // The syscall that is being traced
+};
+
+//stuct for process info
+struct procInfo {
+  int activeProcess;  // # of processes in RUNNABLE and RUNNING state
+  int totalProcess;   // # of total possible processes
+  int memsize;        // in bytes; summation of all active process
+  int totalMemSize;   // in bytes; all available physical Memory
 };

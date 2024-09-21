@@ -1,5 +1,12 @@
 struct stat;
 
+struct procInfo {
+ int activeProcess;  // # of processes in RUNNABLE and RUNNING state
+ int totalProcess;   // # of total possible processes
+ int memsize;        // in bytes; summation of all active process
+ int totalMemSize;   // in bytes; all available physical Memory
+ };
+
 // system calls
 int fork(void);
 int exit(int) __attribute__((noreturn));
@@ -22,6 +29,8 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
+int trace(int);
+int info(struct procInfo*);
 
 // ulib.c
 int stat(const char*, struct stat*);
