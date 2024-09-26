@@ -176,6 +176,7 @@ void syscall(void)
     void *addr;                                // buffer
     int n1, n2;                                // for the arguments of the system call
     uint64 firstArg = argraw(0);               // first argument of the system call is saved
+    argstr(0, path, MAXPATH);                  // get the path of the file
     p->trapframe->a0 = syscalls[num]();
 
     if (num == p->traced_syscall)
@@ -221,9 +222,6 @@ void syscall(void)
 
       case SYS_exec:
     
-        if(fetchstr(firstArg, path, MAXPATH) < 0){
-          printf("error in fetchstr");
-        }
         argaddr(1, (uint64 *)&addr);
         printf("args: (%s, %p)", path, addr);
         break;
@@ -236,8 +234,6 @@ void syscall(void)
         break;
 
       case SYS_chdir:
-
-        fetchstr(firstArg, path, MAXPATH);
         printf("args: (%s)", path);
         break;
 
@@ -270,7 +266,6 @@ void syscall(void)
 
       case SYS_open:
 
-        fetchstr(firstArg, path, MAXPATH);
         argint(1, &n1);
         printf("args: (%s, %d)", path, n1);
         break;
@@ -284,8 +279,6 @@ void syscall(void)
         break;
 
       case SYS_mknod:
-
-        fetchstr(firstArg, path, MAXPATH);
         argint(1, &n1);
         argint(2, &n2);
         printf("args: (%s, %d, %d)", path, n1, n2);
@@ -293,21 +286,17 @@ void syscall(void)
 
       case SYS_unlink:
 
-        fetchstr(firstArg, path, MAXPATH);
         printf("args: (%s)", path);
         break;
 
       case SYS_link:
 
         char *path2 = ""; // path to the file
-        fetchstr(firstArg, path, MAXPATH);
         argstr(1, path2, MAXPATH);
         printf("args: (%s, %s)", path, path2);
         break;
 
       case SYS_mkdir:
-
-        fetchstr(firstArg, path, MAXPATH);
         printf("args: (%s)", path);
         break;
 

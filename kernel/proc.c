@@ -98,7 +98,7 @@ int info(void)
     // Check if the process is in ZOMBIE state and skip it, but still release the lock
     if (p->state == ZOMBIE)
     {
-      printf("Process %s is in ZOMBIE state\n", p->name);
+      //printf("Process %s is in ZOMBIE state\n", p->name);
       release(&p->lock); // Release lock here
       continue;
     }
@@ -106,7 +106,7 @@ int info(void)
     // Check if the process is in USED state and skip it, but still release the lock
     if (p->state == USED)
     {
-      printf("Process %s is in USED state\n", p->name);
+      //printf("Process %s is in USED state\n", p->name);
       release(&p->lock); // Release lock here
       continue;
     }
@@ -115,9 +115,8 @@ int info(void)
     if (p->state == RUNNABLE || p->state == RUNNING || p->state == SLEEPING)
     {
       activeProcess++;
-       printf("Process %s is in %s state\n", p->name,
-       p->state == RUNNABLE ? "RUNNABLE" : p->state == RUNNING ? "RUNNING"
-        : "SLEEPING");
+       //printf("Process %s is in %s state\n", p->name,
+             // p->state == RUNNABLE ? "RUNNABLE" : p->state == RUNNING ? "RUNNING" : "SLEEPING");
       memsize += p->sz; // Adding the memory size of the active process
     }
 

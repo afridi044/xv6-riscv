@@ -13,7 +13,7 @@
 
 #define MAXARGS 10
 
-#define MAXLINE 128 // max number of characters in a command
+#define MAXPREVCMDS 10
 
 struct cmd
 {
@@ -61,6 +61,7 @@ int fork1(void); // Fork but panics on failure.
 void panic(char *);
 struct cmd *parsecmd(char *);
 void runcmd(struct cmd *) __attribute__((noreturn));
+int peek(char **ps, char *es, char *toks);
 
 // Execute cmd.  Never returns.
 void runcmd(struct cmd *cmd)
@@ -170,18 +171,52 @@ int main(void)
   // Read and run input commands.
   while (getcmd(buf, sizeof(buf)) >= 0)
   {
+    // Implementing the command history feature
+    // !! gives the last command
+    // !! n gives the nth last command
 
-    // adding the functionality to run the last command
-    if (strcmp(buf, "!!\n") == 0)
+    if (buf[0] == '!' && buf[1] == '!')
     {
-      char lastCommand[MAXLINE];
-      if (get_command(1, lastCommand) == -1)
+      if (buf[2] == '\n')
       {
-        fprintf(2, "No commands in history\n");
+        if (get_command(1, buf) == -1)
+        {
+          fprintf(2, "No commands in history\n");
+          continue;
+        }
+        printf("%s", buf);
+        // printf("!!\n");
+      }
+      else if (buf[2] == ' ')
+      {
+        int n = atoi(buf + 3);
+        if (n > MAXPREVCMDS)
+        {
+          fprintf(2, "Maximum number of previous commands is %d\n", MAXPREVCMDS);
+          continue;
+        }
+        else if (n < 1)
+        {
+          fprintf(2, "Usage: !! or !! n\n");
+          continue;
+        }
+        if (get_command(n, buf) == -1)
+        {
+          fprintf(2, "No such command in history\n");
+          continue;
+        }
+        printf("%s", buf);
+        // printf("!! %d\n", n);
+      }
+      else
+      {
+        fprintf(2, "Usage: !! or !! n\n");
         continue;
       }
-       strcpy(buf, lastCommand);
     }
+
+    // Adding the command to the history
+    command_history(buf);
 
     if (buf[0] == 'c' && buf[1] == 'd' && buf[2] == ' ')
     {
@@ -192,8 +227,7 @@ int main(void)
       continue;
     }
     if (fork1() == 0)
-    { 
-      command_history(buf);
+    {
       runcmd(parsecmd(buf));
     }
 
