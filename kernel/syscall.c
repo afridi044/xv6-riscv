@@ -99,6 +99,8 @@ extern uint64 sys_mkdir(void);
 extern uint64 sys_close(void);
 extern uint64 sys_trace(void);
 extern uint64 sys_info(void);
+extern uint64 sys_command_history(void);
+extern uint64 sys_get_command(void);
 
 // An array mapping syscall numbers from syscall.h
 // to the function that handles the system call.
@@ -126,6 +128,8 @@ static uint64 (*syscalls[])(void) = {
     [SYS_close] sys_close,
     [SYS_trace] sys_trace,
     [SYS_info] sys_info,
+    [SYS_command_history] sys_command_history,
+    [SYS_get_command] sys_get_command,
 };
 
 // making an array of the system calls names
@@ -153,6 +157,8 @@ char *syscall_names[] = {
     [SYS_close] = "close",
     [SYS_trace] = "trace",
     [SYS_info] = "info",
+    [SYS_command_history] = "command_history",
+    [SYS_get_command] = "get_command",
 };
 
 void syscall(void)
@@ -166,12 +172,15 @@ void syscall(void)
     // Use num to lookup the system call function for num, call it,
     // and store its return value in p->trapframe->a0
 
-    char *path = ""; // path to the file
-    void *addr;      // buffer
-    int n1, n2;      // for the arguments of the system call
+    char *path = "";                           // path to the file
+    void *addr;                                // buffer
+    int n1, n2;                                // for the arguments of the system call
+    uint64 firstArg = argraw(0);               // first argument of the system call is saved
+    p->trapframe->a0 = syscalls[num]();
 
     if (num == p->traced_syscall)
     {
+
       printf("pid: %d, syscall: %s, ", p->pid, syscall_names[num]);
       // print the arguments of the system call
       // like this args: (3, 0x0000000000001010, 1023)
@@ -184,55 +193,57 @@ void syscall(void)
         break;
 
       case SYS_exit:
-        argint(0, &n1);
+        n1 = firstArg;
         printf("args: (%d)", n1);
         break;
 
       case SYS_wait:
-        argaddr(0, (uint64 *)&addr);
+        addr = (void *)firstArg;
         printf("args: (%p)", addr);
         break;
 
       case SYS_pipe:
-        argaddr(0, (uint64 *)&addr);
+        addr = (void *)firstArg;
         printf("args: (%p)", addr);
         break;
 
       case SYS_read:
-        argint(0, &n1);
+        n1 = firstArg;
         argaddr(1, (uint64 *)&addr);
         argint(2, &n2);
         printf("args: (%d, %p, %d)", n1, addr, n2);
         break;
 
       case SYS_kill:
-        argint(0, &n1);
+        n1 = firstArg;
         printf("args: (%d)", n1);
         break;
 
       case SYS_exec:
-
-        argstr(0, path, MAXPATH);
+    
+        if(fetchstr(firstArg, path, MAXPATH) < 0){
+          printf("error in fetchstr");
+        }
         argaddr(1, (uint64 *)&addr);
         printf("args: (%s, %p)", path, addr);
         break;
 
       case SYS_fstat:
 
-        argint(0, &n1);
+        n1 = firstArg;
         argaddr(1, (uint64 *)&addr);
         printf("args: (%d, %p)", n1, addr);
         break;
 
       case SYS_chdir:
 
-        argstr(0, path, MAXPATH);
+        fetchstr(firstArg, path, MAXPATH);
         printf("args: (%s)", path);
         break;
 
       case SYS_dup:
 
-        argint(0, &n1);
+        n1 = firstArg;
         printf("args: (%d)", n1);
         break;
 
@@ -241,14 +252,14 @@ void syscall(void)
         break;
 
       case SYS_sbrk:
-        
-        argint(0, &n1);
+
+        n1 = firstArg;
         printf("args: (%d)", n1);
         break;
 
       case SYS_sleep:
 
-        argint(0, &n1);
+        n1 = firstArg;
         printf("args: (%d)", n1);
         break;
 
@@ -259,14 +270,14 @@ void syscall(void)
 
       case SYS_open:
 
-        argstr(0, path, MAXPATH);
+        fetchstr(firstArg, path, MAXPATH);
         argint(1, &n1);
         printf("args: (%s, %d)", path, n1);
         break;
 
       case SYS_write:
 
-        argint(0, &n1);
+        n1 = firstArg;
         argaddr(1, (uint64 *)&addr);
         argint(2, &n2);
         printf("args: (%d, %p, %d)", n1, addr, n2);
@@ -274,7 +285,7 @@ void syscall(void)
 
       case SYS_mknod:
 
-        argstr(0, path, MAXPATH);
+        fetchstr(firstArg, path, MAXPATH);
         argint(1, &n1);
         argint(2, &n2);
         printf("args: (%s, %d, %d)", path, n1, n2);
@@ -282,49 +293,61 @@ void syscall(void)
 
       case SYS_unlink:
 
-        argstr(0, path, MAXPATH);
+        fetchstr(firstArg, path, MAXPATH);
         printf("args: (%s)", path);
         break;
 
       case SYS_link:
-        
+
         char *path2 = ""; // path to the file
-        argstr(0, path, MAXPATH);
+        fetchstr(firstArg, path, MAXPATH);
         argstr(1, path2, MAXPATH);
         printf("args: (%s, %s)", path, path2);
         break;
 
       case SYS_mkdir:
 
-        argstr(0, path, MAXPATH);
+        fetchstr(firstArg, path, MAXPATH);
         printf("args: (%s)", path);
         break;
 
       case SYS_close:
 
-        argint(0, &n1);
+        n1 = firstArg;
         printf("args: (%d)", n1);
         break;
 
       case SYS_trace:
 
-        argint(0, &n1);
+        n1 = firstArg;
         printf("args: (%d)", n1);
         break;
-      
+
       case SYS_info:
-      
-      argaddr(0, (uint64 *)&addr);
-      printf("args: (%p)", addr);
+
+        addr = (void *)firstArg;
+        printf("args: (%p)", addr);
+        break;
+
+      case SYS_command_history:
+
+        addr = (void *)firstArg;
+        printf("args: (%p)", addr);
+        break;
+
+      case SYS_get_command:
+
+        n1 = firstArg;
+        argaddr(1, (uint64 *)&addr);
+        printf("args: (%d, %p)", n1, addr);
+        break;
 
       default:
         break;
       }
-    }
 
-    p->trapframe->a0 = syscalls[num]();
-    if (num == p->traced_syscall)
       printf(", return: %lu \n", p->trapframe->a0);
+    }
   }
   else
   {

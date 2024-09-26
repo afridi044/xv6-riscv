@@ -38,3 +38,5 @@ entry("sleep");
 entry("uptime");
 entry("trace");
 entry("info");
+entry("command_history");
+entry("get_command");

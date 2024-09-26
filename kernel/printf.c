@@ -20,7 +20,7 @@ volatile int panicked = 0;
 // lock to avoid interleaving concurrent printf's.
 static struct {
   struct spinlock lock;
-  int locking;
+  int locking;   
 } pr;
 
 static char digits[] = "0123456789abcdef";
@@ -68,7 +68,7 @@ printf(char *fmt, ...)
   char *s;
 
   locking = pr.locking;
-  if(locking)
+  if(locking)  
     acquire(&pr.lock);
 
   va_start(ap, fmt);

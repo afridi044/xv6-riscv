@@ -31,6 +31,8 @@ int sleep(int);
 int uptime(void);
 int trace(int);
 int info(struct procInfo*);
+int command_history(char*);
+int get_command(int, char*);
 
 // ulib.c
 int stat(const char*, struct stat*);

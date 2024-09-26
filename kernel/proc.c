@@ -26,67 +26,117 @@ extern char trampoline[]; // trampoline.S
 // must be acquired before any p->lock.
 struct spinlock wait_lock;
 
+struct spinlock history_lock;
+
+// addition for the command history and running the last command
+
+char history[MAX_HISTORY][MAXLINE];
+
+int history_index = 0;
+
+// Implementing the command history feature
+void update_command_history(char *cmd)
+{
+  acquire(&history_lock);
+
+  int index = history_index % MAX_HISTORY;
+
+  safestrcpy(history[index], cmd, MAXLINE);
+  history_index++;
+
+  release(&history_lock);
+}
+
+
+// last command is the latest entry in the history
+
+int get_latest_command(int n, char *cmd)
+{
+  // if n==3 it means we want the last 3rd command in the history
+  if (n > MAX_HISTORY || n < 1)
+    return -1;
+
+  acquire(&history_lock);
+
+  int index = (history_index - n + MAX_HISTORY) % MAX_HISTORY;
+
+  if (strlen(history[index]) == 0)
+  {
+    release(&history_lock);
+    return -1;
+  }
+
+  safestrcpy(cmd, history[index], MAXLINE);
+
+  release(&history_lock);
+
+  return 0;
+}
+
+// Implementing the info syscall (added for the info system call)
 int info(void)
 {
   struct procInfo pInfo = {0};
   struct proc *p;
   int activeProcess = 0;
   int memsize = 0;
+
   // Iterating over all processes in the proc[] array
-  
   for (int i = 0; i < NPROC; i++)
   {
-    p = &proc[i];      // Accessing each process by index
-    
+    p = &proc[i]; // Accessing each process by index
+
+    acquire(&p->lock); // Acquiring the lock of the process
+
+    // Check if the process is UNUSED, and skip it, but still release the lock
     if (p->state == UNUSED)
     {
-      continue; // Skip the process if it is in UNUSED state
+      release(&p->lock); // Release lock here
+      continue;
     }
 
-    if(p->state == ZOMBIE)
+    // Check if the process is in ZOMBIE state and skip it, but still release the lock
+    if (p->state == ZOMBIE)
     {
       printf("Process %s is in ZOMBIE state\n", p->name);
-      continue; // Skip the process if it is in ZOMBIE state
+      release(&p->lock); // Release lock here
+      continue;
     }
 
-    if(p->state == SLEEPING)
-    {
-      printf("process %s is in SLEEPING state\n", p->name);
-      continue; // Skip the process if it is in SLEEPING state
-    }
-
+    // Check if the process is in USED state and skip it, but still release the lock
     if (p->state == USED)
     {
-      printf("process %s is in USED state\n", p->name);
-      continue; // Skip the process if it is in USED state
+      printf("Process %s is in USED state\n", p->name);
+      release(&p->lock); // Release lock here
+      continue;
     }
-    
-    printf("Checking process %s\n", p->name);
 
-    // Checking if the process is in RUNNING or RUNNABLE state
-    if (p->state == RUNNABLE || p->state == RUNNING)
+    // Checking if the process is in RUNNING, RUNNABLE, or SLEEPING state
+    if (p->state == RUNNABLE || p->state == RUNNING || p->state == SLEEPING)
     {
       activeProcess++;
-      printf("Process %s is in %s state\n", p->name, p->state == RUNNABLE ? "RUNNABLE" : "RUNNING");
+       printf("Process %s is in %s state\n", p->name,
+       p->state == RUNNABLE ? "RUNNABLE" : p->state == RUNNING ? "RUNNING"
+        : "SLEEPING");
       memsize += p->sz; // Adding the memory size of the active process
     }
 
-    
+    release(&p->lock); // Releasing the lock after processing the process
   }
 
-
+  // Set the procInfo structure values
   pInfo.activeProcess = activeProcess;
   pInfo.totalProcess = NPROC;
   pInfo.memsize = memsize;
   pInfo.totalMemSize = PHYSTOP - KERNBASE; // Physical memory size in bytes
 
-  void *addr;
-  argaddr(0, (uint64 *)&addr); // Getting the address of the procInfo structure
+  uint64 addr;
+  argaddr(0, &addr);
 
   // Copying the procInfo structure to the user space
-  if (copyout(myproc()->pagetable, (uint64)addr, (char *)&pInfo, sizeof(pInfo)) < 0)
+  if (copyout(myproc()->pagetable, addr, (char *)&pInfo, sizeof(pInfo)) < 0)
   {
-    return -1; // Return error if copyout fails
+    return -1;
   }
 
   return 0; // Success
@@ -116,6 +166,7 @@ void procinit(void)
 
   initlock(&pid_lock, "nextpid");
   initlock(&wait_lock, "wait_lock");
+  initlock(&history_lock, "history_lock");
   for (p = proc; p < &proc[NPROC]; p++)
   {
     initlock(&p->lock, "proc");
@@ -421,7 +472,7 @@ void exit(int status)
 {
   struct proc *p = myproc();
 
-  // clearing traceed_syscall
+  // clearing traceed_syscall (added for the trace system call)
   p->traced_syscall = -1;
 
   if (p == initproc)

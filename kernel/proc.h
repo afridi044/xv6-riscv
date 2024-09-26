@@ -104,14 +104,24 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+  
+  
+  // The syscall that is being traced (added for the trace system call)
+  int traced_syscall;          
 
-  int traced_syscall;          // The syscall that is being traced
 };
 
-//stuct for process info
+//stuct for process info for info syscall
 struct procInfo {
-  int activeProcess;  // # of processes in RUNNABLE and RUNNING state
+  int activeProcess;  // # of processes in RUNNABLE and RUNNING state (counting the sleeping ones too)
   int totalProcess;   // # of total possible processes
   int memsize;        // in bytes; summation of all active process
   int totalMemSize;   // in bytes; all available physical Memory
 };
+
+//addition for command history
+
+#define MAXLINE 128      // max number of characters in a command
+#define MAX_HISTORY 10   // max number of commands in history
+
+

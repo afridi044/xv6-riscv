@@ -112,12 +112,44 @@ sys_trace(void)
   return 0;
 }
 
-
-
 uint64
 sys_info(void)
-{ 
-  
+{
   uint64 result = info();
   return result;
+}
+
+uint64
+sys_command_history(void)
+{
+  char history[MAXLINE];
+
+  uint64 addr;
+  argaddr(0, &addr);
+
+  // Copying the user-provided data into the kernel buffer
+  if (copyin(myproc()->pagetable, history, addr, MAXLINE) < 0)
+    return -1;          
+  update_command_history(history); 
+
+  return 0; 
+}
+
+uint64
+sys_get_command(void)
+{
+  int n;
+  uint64 addr;
+  argint(0, &n);
+  argaddr(1, &addr);
+  char command[MAXLINE];
+  
+  if(get_latest_command(n, command) == -1)
+    return -1;  
+
+  // Copying the command to the user-provided buffer
+  if (copyout(myproc()->pagetable, addr, command, MAXLINE) < 0)
+    return -1;  
+
+  return 0; 
 }
